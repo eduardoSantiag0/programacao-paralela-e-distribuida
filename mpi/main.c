@@ -49,23 +49,36 @@ int main(int argc, char **argv) {
     int elementos_por_processo = N / num_processos;
     int inicio = rank * elementos_por_processo;
     int fim = inicio + elementos_por_processo;
-
     int soma_parcial = work(inicio, fim, v);
 
+
+    // Como você usaria MPI_ANY_SOURCE no lugar do rank específico na chamada MPI_Recv? Qual a vantagem e a desvantagem?
+
     if (rank == 0) {
-        int soma_global = soma_parcial; 
+        int soma_global = 0; 
         printf("Processo %d (Coordenador) calculou intervalo [%d, %d): soma parcial = %d\n", rank, inicio, fim, soma_parcial);
 
         for (int i = 1; i < num_processos; i++) {
             int soma_recebida;
-            MPI_Recv(&soma_recebida, 1, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            MPI_Status status;
+
+            // Payload, count, MPI_TIPO, destino, tag, Comunicador, Status 
+            
+            // MPI_Recv(&soma_recebida, 1, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+            MPI_Recv(&soma_recebida, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
             soma_global += soma_recebida;
+
+            int actual_sender = status.MPI_SOURCE;
+
+            printf("Sender: %d \n", actual_sender);
+
         }
 
-        printf("-> Soma Global Final = %d\n", soma_global);
+        printf("\nSoma Global Final = %d\n", soma_global);
 
     } else {
-        printf("Processo %d (Worker) calculou intervalo [%d, %d): soma parcial = %d\n", rank, inicio, fim, soma_parcial);
+        printf("Processo %d (Worker) do intervalo [%d, %d): soma parcial = %d\n", rank, inicio, fim, soma_parcial);
         MPI_Send(&soma_parcial, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
     }
 
@@ -73,3 +86,6 @@ int main(int argc, char **argv) {
     MPI_Finalize();
     return 0;
 }
+
+
+// mpicc main.c -o main; mpirun --oversubscribe -np 3 ./main
